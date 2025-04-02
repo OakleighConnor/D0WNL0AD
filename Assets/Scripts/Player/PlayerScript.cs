@@ -1,3 +1,5 @@
+using System;
+using System.Data;
 using Fusion;
 using UnityEngine;
 using UnityEngine.Events;
@@ -7,18 +9,30 @@ public class PlayerScript : NetworkBehaviour
     public Vector2 movementInput;
 
     public UnityEvent movement;
-    Rigidbody2D rb;
+    Fusion.Addons.Physics.NetworkRigidbody2D rb;
 
-    public int speed;
+    public Vector2 lastDirection;
 
-    private void Awake()
+    public int acceleration;
+    int maxSpeed;
+
+    void Awake()
     {
-        rb = GetComponent<Rigidbody2D>();
+        maxSpeed = acceleration * 2;
+
+        rb = GetBehaviour<Fusion.Addons.Physics.NetworkRigidbody2D>();
     }
+
+    public override void Spawned()
+    {
+        Runner.SetPlayerAlwaysInterested(Object.InputAuthority, Object, true);
+        Runner.SetIsSimulated(Object, true);
+    }
+
+    // CONNECTING CLIENTS CURRENTLY SUFFER FROM JITTERS WHEN MOVING
 
     public override void FixedUpdateNetwork()
     {
-        if(HasStateAuthority.Input)
         movement.Invoke();
     }
 
@@ -29,7 +43,17 @@ public class PlayerScript : NetworkBehaviour
         {
             data.directionP1.Normalize();
 
-            rb.AddForce(data.directionP1 * speed * 10);
+            if(data.directionP1 != lastDirection)
+            {
+                rb.Rigidbody.linearVelocityX = 0;
+            }
+
+            if(rb.Rigidbody.linearVelocityX < maxSpeed && rb.Rigidbody.linearVelocityX > -maxSpeed)
+            {
+                rb.Rigidbody.AddForce(data.directionP1 * acceleration * 1000 * Runner.DeltaTime, ForceMode2D.Force);
+            }
+
+            lastDirection = data.directionP1;
         }
     }
     
