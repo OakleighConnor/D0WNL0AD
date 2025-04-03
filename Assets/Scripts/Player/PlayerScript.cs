@@ -1,20 +1,23 @@
 using System;
 using System.Data;
 using Fusion;
+using Fusion.Addons.Physics;
 using UnityEngine;
 using UnityEngine.Events;
 
 public class PlayerScript : NetworkBehaviour
 {
-    public Vector2 movementInput;
-
-    public UnityEvent movement;
+    public UnityEvent<NetworkInputData> AssignInputs;
     Fusion.Addons.Physics.NetworkRigidbody2D rb;
 
+    public Vector2 movementInput;
     public Vector2 lastDirection;
+    Vector2 dir;
 
     public int acceleration;
     int maxSpeed;
+
+    public int player;
 
     void Awake()
     {
@@ -27,47 +30,58 @@ public class PlayerScript : NetworkBehaviour
     {
         Runner.SetPlayerAlwaysInterested(Object.InputAuthority, Object, true);
         Runner.SetIsSimulated(Object, true);
+
+        if (player == 1)
+        {
+            AssignInputs.AddListener(AssignInputsP1);
+        }
+        else if (player == 2)
+        {
+            AssignInputs.AddListener(AssignInputsP2);
+        }
+        else
+        {
+            Debug.LogError($"Player value is undefined. Player value: {player}. If null player is undefined.");
+        }
     }
 
     // CONNECTING CLIENTS CURRENTLY SUFFER FROM JITTERS WHEN MOVING
 
     public override void FixedUpdateNetwork()
     {
-        movement.Invoke();
+        if (GetInput(out NetworkInputData data))
+        {
+            AssignInputs.Invoke(data);
+        }
+
+        Movement();
     }
 
-    public void MovementP1()
+    public void AssignInputsP1(NetworkInputData data)
     {
-        Debug.Log("Player 1 movement");
-        if(GetInput(out NetworkInputData data))
-        {
-            data.directionP1.Normalize();
-
-            if(data.directionP1 != lastDirection)
-            {
-                rb.Rigidbody.linearVelocityX = 0;
-            }
-
-            if(rb.Rigidbody.linearVelocityX < maxSpeed && rb.Rigidbody.linearVelocityX > -maxSpeed)
-            {
-                rb.Rigidbody.AddForce(data.directionP1 * acceleration * 1000 * Runner.DeltaTime, ForceMode2D.Force);
-            }
-
-            lastDirection = data.directionP1;
-        }
+        dir = data.directionP1;
     }
     
-    public void MovementP2()
+    public void AssignInputsP2(NetworkInputData data)
     {
-        Debug.Log("Player 2 movement");
-        if(GetInput(out NetworkInputData data))
+        dir = data.directionP2;
+    }
+
+    public void Movement()
+    {
+        dir.Normalize();
+
+        if (dir != lastDirection)
         {
-            /*
-            data.directionP2.Normalize();
-            cc.Move(5 * data.directionP2 * Runner.DeltaTime);
-            anim.SetInteger("Direction", Mathf.RoundToInt(data.directionP1.x));
-            */
+            rb.Rigidbody.linearVelocityX = 0;
         }
+
+        if (rb.Rigidbody.linearVelocityX < maxSpeed && rb.Rigidbody.linearVelocityX > -maxSpeed)
+        {
+            rb.Rigidbody.AddForce(dir * acceleration * 1000 * Runner.DeltaTime, ForceMode2D.Force);
+        }
+
+        lastDirection = dir;
     }
 }
 

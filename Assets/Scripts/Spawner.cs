@@ -52,13 +52,11 @@ public class Spawner : MonoBehaviour, INetworkRunnerCallbacks
         {
             Debug.Log("OnPlayerJoined we are server. Spawning player");
 
-            NetworkObject networkPlayer1Object = runner.Spawn(player1PF, new Vector3(0,10,0), Quaternion.identity, player);
-            _spawnedCharacters.Add(player, networkPlayer1Object);
+            runner.Spawn(player1PF, new Vector3(0,10,0), Quaternion.identity, player).GetComponent<PlayerScript>();
 
             if (PlayerPrefs.GetInt("LocalPlay") == 1)
             {
-                NetworkObject networkPlayer2Object = runner.Spawn(player2PF, new Vector3(10,10,0), Quaternion.identity, player);
-                _spawnedCharacters.Add(player, networkPlayer2Object);
+                runner.Spawn(player2PF, new Vector3(10,10,0), Quaternion.identity, player).GetComponent<PlayerScript>().player = 2;
             }
         }
         else
